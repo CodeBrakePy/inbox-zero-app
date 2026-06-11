@@ -23,6 +23,7 @@ A local-first Python dashboard that imports email from IMAP, classifies each mes
   - Create task
   - Unsubscribe
 - Opens a readable email detail pane with a reply draft and `mailto:` handoff.
+- Shows an `Open unsubscribe link` button when the email provides a safe unsubscribe target.
 
 ## Requirements
 
@@ -126,6 +127,8 @@ http://127.0.0.1:8000
 Use `Human Decision Queue` to focus on messages that likely need your attention.
 
 Click an email in the list to read the full message. `Mark read`, `Archive`, `Create task`, and `Unsubscribe` remove that email from active counts. `Draft reply` opens a local draft and an `Open mail client` link.
+
+`Unsubscribe` is a local triage action. If an email includes a `List-Unsubscribe` header or a detectable unsubscribe link, the dashboard also shows `Open unsubscribe link`. That link opens the sender's unsubscribe page or mailto unsubscribe target so you can confirm the unsubscribe yourself.
 
 ## Reset Local Data
 

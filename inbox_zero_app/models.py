@@ -43,6 +43,7 @@ class Message:
     source: str
     external_id: Optional[str]
     received_at: Optional[str]
+    unsubscribe_url: Optional[str]
     is_read: bool
     created_at: str
     updated_at: str
@@ -70,6 +71,7 @@ class InboxRepository:
                 self._create_messages_table(connection)
             elif self._schema_needs_rebuild(connection):
                 self._rebuild_messages_table(connection)
+            self._ensure_current_columns(connection)
             self._reactivate_unprocessed_imports(connection)
             self._create_indexes(connection)
 
@@ -136,6 +138,7 @@ class InboxRepository:
         source: str = "manual",
         external_id: Optional[str] = None,
         received_at: Optional[str] = None,
+        unsubscribe_url: Optional[str] = None,
         is_read: bool = False,
     ) -> int:
         self._validate_status(status)
@@ -147,9 +150,10 @@ class InboxRepository:
                 """
                 INSERT INTO messages (
                     sender, subject, body, status, priority, category,
-                    classification_reason, source, external_id, received_at, is_read, created_at, updated_at
+                    classification_reason, source, external_id, received_at,
+                    unsubscribe_url, is_read, created_at, updated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     sender.strip(),
@@ -162,6 +166,7 @@ class InboxRepository:
                     source,
                     external_id,
                     received_at,
+                    unsubscribe_url,
                     int(is_read),
                     now,
                     now,
@@ -182,6 +187,7 @@ class InboxRepository:
         source: str,
         external_id: str,
         received_at: Optional[str],
+        unsubscribe_url: Optional[str] = None,
         is_read: bool = False,
     ) -> bool:
         try:
@@ -196,6 +202,7 @@ class InboxRepository:
                 source=source,
                 external_id=external_id,
                 received_at=received_at,
+                unsubscribe_url=unsubscribe_url,
                 is_read=is_read,
             )
         except sqlite3.IntegrityError:
@@ -245,7 +252,8 @@ class InboxRepository:
                 """
                 SELECT
                     id, sender, subject, body, status, priority, category,
-                    classification_reason, source, external_id, received_at, is_read, created_at, updated_at
+                    classification_reason, source, external_id, received_at,
+                    unsubscribe_url, is_read, created_at, updated_at
                 FROM messages
                 WHERE id = ?
                 """,
@@ -289,7 +297,8 @@ class InboxRepository:
         sql = f"""
             SELECT
                 id, sender, subject, body, status, priority, category,
-                classification_reason, source, external_id, received_at, is_read, created_at, updated_at
+                classification_reason, source, external_id, received_at,
+                unsubscribe_url, is_read, created_at, updated_at
             FROM messages
             {where_clause}
             ORDER BY
@@ -373,6 +382,7 @@ class InboxRepository:
                 source TEXT NOT NULL DEFAULT 'manual',
                 external_id TEXT,
                 received_at TEXT,
+                unsubscribe_url TEXT,
                 is_read INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
@@ -392,13 +402,15 @@ class InboxRepository:
             "source": "source" if "source" in columns else "'manual'",
             "external_id": "external_id" if "external_id" in columns else "NULL",
             "received_at": "received_at" if "received_at" in columns else "NULL",
+            "unsubscribe_url": "unsubscribe_url" if "unsubscribe_url" in columns else "NULL",
             "is_read": "is_read" if "is_read" in columns else "0",
         }
         connection.execute(
             f"""
             INSERT INTO messages (
                 id, sender, subject, body, status, priority, category,
-                classification_reason, source, external_id, received_at, is_read, created_at, updated_at
+                classification_reason, source, external_id, received_at,
+                unsubscribe_url, is_read, created_at, updated_at
             )
             SELECT
                 id,
@@ -426,6 +438,7 @@ class InboxRepository:
                 {legacy_select["source"]},
                 {legacy_select["external_id"]},
                 {legacy_select["received_at"]},
+                {legacy_select["unsubscribe_url"]},
                 {legacy_select["is_read"]},
                 created_at,
                 updated_at
@@ -433,6 +446,10 @@ class InboxRepository:
             """
         )
         connection.execute("DROP TABLE messages_legacy")
+
+    def _ensure_current_columns(self, connection: sqlite3.Connection) -> None:
+        if "unsubscribe_url" not in self._table_columns(connection):
+            connection.execute("ALTER TABLE messages ADD COLUMN unsubscribe_url TEXT")
 
     def _create_indexes(self, connection: sqlite3.Connection) -> None:
         connection.execute(
@@ -487,6 +504,7 @@ def _message_from_row(row: sqlite3.Row) -> Message:
         source=row["source"],
         external_id=row["external_id"],
         received_at=row["received_at"],
+        unsubscribe_url=row["unsubscribe_url"],
         is_read=bool(row["is_read"]),
         created_at=row["created_at"],
         updated_at=row["updated_at"],

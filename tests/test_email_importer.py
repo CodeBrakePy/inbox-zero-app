@@ -1,7 +1,13 @@
 import imaplib
 import unittest
 
-from inbox_zero_app.email_importer import _clean_body, _friendly_imap_error
+from email.message import EmailMessage
+
+from inbox_zero_app.email_importer import (
+    _clean_body,
+    _friendly_imap_error,
+    _unsubscribe_target,
+)
 
 
 class EmailImporterTest(unittest.TestCase):
@@ -22,6 +28,23 @@ class EmailImporterTest(unittest.TestCase):
         body = _clean_body("Hello   there,\n\nPlease   review this.\nThanks")
 
         self.assertEqual(body, "Hello there,\n\nPlease review this.\nThanks")
+
+    def test_unsubscribe_target_prefers_https_header(self) -> None:
+        message = EmailMessage()
+        message["List-Unsubscribe"] = (
+            "<mailto:unsubscribe@example.com>, <https://example.com/unsubscribe?id=123>"
+        )
+
+        self.assertEqual(_unsubscribe_target(message), "https://example.com/unsubscribe?id=123")
+
+    def test_unsubscribe_target_falls_back_to_html_link(self) -> None:
+        message = EmailMessage()
+        message.set_content(
+            '<html><body><a href="https://example.com/unsubscribe">Unsubscribe</a></body></html>',
+            subtype="html",
+        )
+
+        self.assertEqual(_unsubscribe_target(message), "https://example.com/unsubscribe")
 
 
 if __name__ == "__main__":

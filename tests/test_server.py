@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 from inbox_zero_app.models import InboxRepository
-from inbox_zero_app.server import render_template
+from inbox_zero_app.server import _render_detail_panel, render_template
 
 
 class ServerTest(unittest.TestCase):
@@ -12,7 +12,13 @@ class ServerTest(unittest.TestCase):
             database = Path(directory) / "server.sqlite3"
             repository = InboxRepository(database)
             repository.initialize()
-            repository.seed_demo_messages()
+            repository.create_message(
+                "Newsletter <news@example.com>",
+                "Weekly news",
+                "Please unsubscribe if you want.",
+                category="unsubscribe",
+                unsubscribe_url="https://example.com/unsubscribe",
+            )
 
             html = render_template(
                 "index.html",
@@ -24,15 +30,35 @@ class ServerTest(unittest.TestCase):
                     "decision_count": str(repository.decision_count()),
                     "decision_mode": "",
                     "error": "",
-                    "message_list": "<a>Portfolio review notes</a>",
+                    "message_list": "<a>Weekly news</a>",
                     "query": "",
                 },
             )
 
             self.assertTrue(database.exists())
             self.assertIn("Today&rsquo;s Inbox", html)
-            self.assertIn("Portfolio review notes", html)
+            self.assertIn("Weekly news", html)
             self.assertIn("Human Decision Queue", html)
+
+    def test_detail_panel_shows_unsubscribe_link_when_detected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = InboxRepository(Path(directory) / "server.sqlite3")
+            repository.initialize()
+            message_id = repository.create_message(
+                "Newsletter <news@example.com>",
+                "Weekly news",
+                "Please unsubscribe if you want.",
+                category="unsubscribe",
+                unsubscribe_url="https://example.com/unsubscribe",
+            )
+
+            message = repository.get_message(message_id)
+            self.assertIsNotNone(message)
+
+            html = _render_detail_panel(message, {"category": "", "decision": "", "q": ""}, False)
+
+            self.assertIn("Open unsubscribe link", html)
+            self.assertIn("https://example.com/unsubscribe", html)
 
 
 if __name__ == "__main__":

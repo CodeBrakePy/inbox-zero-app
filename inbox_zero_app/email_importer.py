@@ -6,6 +6,7 @@ import argparse
 import email
 import imaplib
 import os
+import re
 from dataclasses import dataclass
 from email.header import decode_header, make_header
 from email.message import Message as EmailMessage
@@ -30,11 +31,20 @@ class _HTMLTextParser(HTMLParser):
     def __init__(self) -> None:
         super().__init__()
         self.parts: list[str] = []
+        self.links: list[str] = []
 
     def handle_data(self, data: str) -> None:
         cleaned = data.strip()
         if cleaned:
             self.parts.append(cleaned)
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, Optional[str]]]) -> None:
+        if tag.lower() != "a":
+            return
+        attributes = dict(attrs)
+        href = attributes.get("href")
+        if href:
+            self.links.append(href.strip())
 
     def text(self) -> str:
         return " ".join(self.parts)
@@ -81,6 +91,7 @@ def _save_message(repository: InboxRepository, parsed: EmailMessage, username: s
     body = _message_body(parsed)
     message_id = parsed.get("Message-ID") or f"{username}:{parsed.get('Date', '')}:{subject}:{sender}"
     received_at = _received_at(parsed)
+    unsubscribe_url = _unsubscribe_target(parsed)
     classification = classify_email(sender, subject, body)
 
     imported = repository.create_imported_message(
@@ -94,6 +105,7 @@ def _save_message(repository: InboxRepository, parsed: EmailMessage, username: s
         source="imap",
         external_id=message_id,
         received_at=received_at,
+        unsubscribe_url=unsubscribe_url,
     )
     return 1 if imported else 0
 
@@ -154,6 +166,51 @@ def _html_to_text(html: str) -> str:
     parser = _HTMLTextParser()
     parser.feed(html)
     return parser.text()
+
+
+def _unsubscribe_target(message: EmailMessage) -> Optional[str]:
+    header_target = _unsubscribe_from_header(message.get("List-Unsubscribe", ""))
+    if header_target:
+        return header_target
+
+    for link in _html_links(message):
+        if "unsubscribe" in link.lower():
+            return link
+    return None
+
+
+def _unsubscribe_from_header(value: str) -> Optional[str]:
+    if not value:
+        return None
+
+    targets = re.findall(r"<([^>]+)>", value)
+    if not targets:
+        targets = [part.strip() for part in value.split(",")]
+
+    clean_targets = [target.strip() for target in targets if target.strip()]
+    for target in clean_targets:
+        if target.lower().startswith("https://"):
+            return target
+    for target in clean_targets:
+        if target.lower().startswith("http://"):
+            return target
+    for target in clean_targets:
+        if target.lower().startswith("mailto:"):
+            return target
+    return None
+
+
+def _html_links(message: EmailMessage) -> list[str]:
+    links: list[str] = []
+    parts = message.walk() if message.is_multipart() else [message]
+    for part in parts:
+        if part.get_content_type() != "text/html" or part.get_content_disposition() == "attachment":
+            continue
+        decoded = _decode_payload(part)
+        parser = _HTMLTextParser()
+        parser.feed(decoded)
+        links.extend(parser.links)
+    return links
 
 
 def _clean_body(body: str) -> str:

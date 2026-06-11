@@ -55,6 +55,7 @@ class InboxRepositoryTest(unittest.TestCase):
                 source="imap",
                 external_id="<message-1@example.com>",
                 received_at="2026-06-11T12:00:00+00:00",
+                unsubscribe_url="https://example.com/unsubscribe",
             )
             second = repository.create_imported_message(
                 sender="Person <person@example.com>",
@@ -72,6 +73,10 @@ class InboxRepositoryTest(unittest.TestCase):
             self.assertTrue(first)
             self.assertFalse(second)
             self.assertEqual(repository.category_counts()["reply_now"], 1)
+            self.assertEqual(
+                repository.list_messages()[0].unsubscribe_url,
+                "https://example.com/unsubscribe",
+            )
 
     def test_dashboard_counts_and_actions(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -295,6 +295,7 @@ def _render_detail_panel(
             <a class="secondary-button" href="{draft_href}">Draft reply</a>
             {_render_action_button(message.id, "create_task", "Create task")}
             {_render_action_button(message.id, "unsubscribe", "Unsubscribe")}
+            {_render_unsubscribe_link(message)}
         </div>
         {_render_reply_panel(message) if draft_open else ""}
     </section>
@@ -320,6 +321,15 @@ def _render_action_button(message_id: int, action: str, label: str) -> str:
         <button type="submit">{label}</button>
     </form>
     """
+
+
+def _render_unsubscribe_link(message: Message) -> str:
+    if not message.unsubscribe_url:
+        return ""
+    return (
+        f'<a class="danger-button" href="{_escape(message.unsubscribe_url)}" '
+        'target="_blank" rel="noopener noreferrer">Open unsubscribe link</a>'
+    )
 
 
 def _reply_draft(message: Message) -> str:

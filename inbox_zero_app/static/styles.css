@@ -92,6 +92,7 @@ button,
 .decision-button,
 .primary-button,
 .secondary-button,
+.danger-button,
 .error-page a {
     border: 0;
     border-radius: 8px;
@@ -344,13 +345,19 @@ button,
 }
 
 .triage-actions button,
-.triage-actions .secondary-button {
+.triage-actions .secondary-button,
+.triage-actions .danger-button {
     min-height: 36px;
     border: 1px solid var(--line);
     background: #f8faf8;
     color: var(--ink);
     font-size: 0.86rem;
     padding: 8px 10px;
+}
+
+.triage-actions .danger-button {
+    border-color: rgba(175, 63, 63, 0.28);
+    color: var(--red);
 }
 
 .reply-panel {

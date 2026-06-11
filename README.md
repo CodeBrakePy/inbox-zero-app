@@ -90,22 +90,22 @@ Provider notes:
 
 Run the import command in the same terminal where you exported the variables.
 
-Import the latest 500 messages:
+Import the latest 50 messages:
 
 ```bash
-python3 -m inbox_zero_app.email_importer --limit 500
+python3 -m inbox_zero_app.email_importer --limit 50
 ```
 
 Import only unread messages:
 
 ```bash
-python3 -m inbox_zero_app.email_importer --limit 200 --unseen-only
+python3 -m inbox_zero_app.email_importer --limit 20 --unseen-only
 ```
 
 Import from a different mailbox:
 
 ```bash
-python3 -m inbox_zero_app.email_importer --mailbox "Archive" --limit 500
+python3 -m inbox_zero_app.email_importer --mailbox "Archive" --limit 50
 ```
 
 The importer skips messages it has already imported, so you can run it more than once.

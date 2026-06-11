@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Inbox Zero</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <main class="app-shell">
+        <section class="workspace">
+            <header class="workspace-header">
+                <div>
+                    <p class="eyebrow">Python + SQLite productivity app</p>
+                    <h1>Inbox Zero</h1>
+                </div>
+                <form class="search-form" method="get" action="/">
+                    <input type="search" name="q" value="$query" placeholder="Search messages">
+                    <button type="submit" title="Search">Search</button>
+                </form>
+            </header>
+
+            $error_banner
+
+            <nav class="tabs" aria-label="Inbox filters">
+                $filter_tabs
+            </nav>
+
+            <section class="workflow" aria-label="Workflow summary">
+                $workflow_lanes
+            </section>
+
+            <section class="messages" aria-label="Messages">
+                $message_cards
+            </section>
+        </section>
+
+        <aside class="compose-panel">
+            <h2>New Message</h2>
+            <form method="post" action="/messages">
+                <label>
+                    Sender
+                    <input name="sender" type="text" placeholder="Ada Lovelace" required>
+                </label>
+                <label>
+                    Subject
+                    <input name="subject" type="text" placeholder="Review this idea" required>
+                </label>
+                <label>
+                    Message
+                    <textarea name="body" rows="6" placeholder="Capture the next action..." required></textarea>
+                </label>
+                <label>
+                    Priority
+                    <select name="priority">$priority_options</select>
+                </label>
+                <button class="primary-button" type="submit">Add to Inbox</button>
+            </form>
+        </aside>
+    </main>
+</body>
+</html>

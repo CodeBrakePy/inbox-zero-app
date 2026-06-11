@@ -22,6 +22,7 @@ A local-first Python dashboard that imports email from IMAP, classifies each mes
   - Draft reply
   - Create task
   - Unsubscribe
+- Opens a readable email detail pane with a reply draft and `mailto:` handoff.
 
 ## Requirements
 
@@ -123,6 +124,8 @@ http://127.0.0.1:8000
 ```
 
 Use `Human Decision Queue` to focus on messages that likely need your attention.
+
+Click an email in the list to read the full message. `Mark read`, `Archive`, `Create task`, and `Unsubscribe` remove that email from active counts. `Draft reply` opens a local draft and an `Open mail client` link.
 
 ## Reset Local Data
 

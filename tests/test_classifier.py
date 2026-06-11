@@ -24,6 +24,7 @@ class ClassifierTest(unittest.TestCase):
 
         self.assertEqual(result.category, "unsubscribe")
         self.assertEqual(result.priority, "low")
+        self.assertEqual(result.status, "inbox")
 
     def test_detects_automated_email(self) -> None:
         result = classify_email(
@@ -33,6 +34,7 @@ class ClassifierTest(unittest.TestCase):
         )
 
         self.assertEqual(result.category, "receipt_document")
+        self.assertEqual(result.status, "inbox")
 
 
 if __name__ == "__main__":

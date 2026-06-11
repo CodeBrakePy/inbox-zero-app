@@ -135,7 +135,7 @@ def _message_body(message: EmailMessage) -> str:
             plain_text = decoded
 
     body = plain_text.strip() or html_text.strip()
-    return " ".join(body.split())
+    return _clean_body(body)
 
 
 def _decode_payload(part: EmailMessage) -> str:
@@ -154,6 +154,21 @@ def _html_to_text(html: str) -> str:
     parser = _HTMLTextParser()
     parser.feed(html)
     return parser.text()
+
+
+def _clean_body(body: str) -> str:
+    lines = []
+    blank_pending = False
+    for raw_line in body.replace("\r\n", "\n").replace("\r", "\n").split("\n"):
+        line = " ".join(raw_line.split())
+        if line:
+            if blank_pending and lines:
+                lines.append("")
+            lines.append(line)
+            blank_pending = False
+        else:
+            blank_pending = True
+    return "\n".join(lines)
 
 
 def _received_at(message: EmailMessage) -> Optional[str]:

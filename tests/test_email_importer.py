@@ -1,7 +1,7 @@
 import imaplib
 import unittest
 
-from inbox_zero_app.email_importer import _friendly_imap_error
+from inbox_zero_app.email_importer import _clean_body, _friendly_imap_error
 
 
 class EmailImporterTest(unittest.TestCase):
@@ -17,6 +17,11 @@ class EmailImporterTest(unittest.TestCase):
         self.assertIn("Google app password", message)
         self.assertIn("https://myaccount.google.com/apppasswords", message)
         self.assertIn("INBOX_ZERO_PASSWORD", message)
+
+    def test_clean_body_preserves_paragraphs(self) -> None:
+        body = _clean_body("Hello   there,\n\nPlease   review this.\nThanks")
+
+        self.assertEqual(body, "Hello there,\n\nPlease review this.\nThanks")
 
 
 if __name__ == "__main__":

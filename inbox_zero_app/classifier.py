@@ -122,7 +122,7 @@ def classify_email(sender: str, subject: str, body: str) -> EmailClassification:
         return EmailClassification(
             category="unsubscribe",
             priority="low",
-            status="done",
+            status="inbox",
             reason="Looks like a newsletter or mailing list.",
         )
 
@@ -130,7 +130,7 @@ def classify_email(sender: str, subject: str, body: str) -> EmailClassification:
         return EmailClassification(
             category="receipt_document",
             priority="low",
-            status="done",
+            status="inbox",
             reason="Looks like a receipt, invoice, statement, or document.",
         )
 
@@ -138,7 +138,7 @@ def classify_email(sender: str, subject: str, body: str) -> EmailClassification:
         return EmailClassification(
             category="archive",
             priority="low",
-            status="done",
+            status="inbox",
             reason="Looks automated, transactional, or notification-only.",
         )
 
@@ -170,7 +170,7 @@ def classify_email(sender: str, subject: str, body: str) -> EmailClassification:
     return EmailClassification(
         category="archive",
         priority="low",
-        status="done",
+        status="inbox",
         reason="No human decision signal found.",
     )
 

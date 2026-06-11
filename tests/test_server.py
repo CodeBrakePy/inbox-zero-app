@@ -17,15 +17,14 @@ class ServerTest(unittest.TestCase):
             html = render_template(
                 "index.html",
                 {
-                    "active_filter": "all",
                     "active_category": "all",
                     "category_counts": repository.category_counts(),
                     "dashboard_counts": repository.dashboard_counts(),
+                    "detail_panel": "<section>Detail</section>",
                     "decision_count": str(repository.decision_count()),
                     "decision_mode": "",
                     "error": "",
-                    "grouped_messages": {"inbox": [], "today": [], "waiting": [], "done": []},
-                    "messages": repository.list_messages(),
+                    "message_list": "<a>Portfolio review notes</a>",
                     "query": "",
                 },
             )

@@ -70,6 +70,7 @@ class InboxRepository:
                 self._create_messages_table(connection)
             elif self._schema_needs_rebuild(connection):
                 self._rebuild_messages_table(connection)
+            self._reactivate_unprocessed_imports(connection)
             self._create_indexes(connection)
 
     def seed_demo_messages(self) -> None:
@@ -204,10 +205,9 @@ class InboxRepository:
     def apply_action(self, message_id: int, action: str) -> None:
         updates = {
             "archive": ("done", "archive", "Archived from the triage dashboard.", 1, None),
-            "mark_read": (None, None, "Marked read locally.", 1, None),
-            "snooze": ("waiting", "reply_later", "Snoozed for later follow-up.", None, None),
-            "draft_reply": ("today", "reply_now", "Reply draft queued locally.", None, "high"),
-            "create_task": ("today", "important_no_action", "Converted into a task candidate.", None, "high"),
+            "mark_read": ("done", None, "Marked read locally.", 1, None),
+            "snooze": ("waiting", "reply_later", "Snoozed out of today's active queue.", 1, None),
+            "create_task": ("done", "important_no_action", "Converted into a task candidate.", 1, "high"),
             "unsubscribe": ("done", "unsubscribe", "Marked for unsubscribe.", 1, "low"),
         }
         if action not in updates:
@@ -239,15 +239,34 @@ class InboxRepository:
                 values,
             )
 
+    def get_message(self, message_id: int) -> Optional[Message]:
+        with self.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT
+                    id, sender, subject, body, status, priority, category,
+                    classification_reason, source, external_id, received_at, is_read, created_at, updated_at
+                FROM messages
+                WHERE id = ?
+                """,
+                (message_id,),
+            ).fetchone()
+        return _message_from_row(row) if row else None
+
     def list_messages(
         self,
         *,
         category: Optional[str] = None,
         decision_only: bool = False,
+        active_only: bool = True,
         query: str = "",
     ) -> list[Message]:
         filters: list[str] = []
         values: list[str] = []
+
+        if active_only:
+            filters.append("status != 'done'")
+            filters.append("is_read = 0")
 
         if category:
             self._validate_category(category)
@@ -290,18 +309,19 @@ class InboxRepository:
             rows = connection.execute(sql, values).fetchall()
             return [_message_from_row(row) for row in rows]
 
-    def category_counts(self) -> dict[str, int]:
+    def category_counts(self, *, active_only: bool = True) -> dict[str, int]:
         counts = {category: 0 for category in CATEGORIES}
+        where_clause = "WHERE status != 'done' AND is_read = 0" if active_only else ""
         with self.connect() as connection:
             rows = connection.execute(
-                "SELECT category, COUNT(*) AS total FROM messages GROUP BY category"
+                f"SELECT category, COUNT(*) AS total FROM messages {where_clause} GROUP BY category"
             ).fetchall()
         for row in rows:
             counts[row["category"]] = int(row["total"])
         return counts
 
     def dashboard_counts(self) -> dict[str, int]:
-        category_counts = self.category_counts()
+        category_counts = self.category_counts(active_only=True)
         return {
             "Needs reply": category_counts["reply_now"],
             "Waiting on me": category_counts["reply_later"],
@@ -312,7 +332,7 @@ class InboxRepository:
         }
 
     def decision_count(self) -> int:
-        return sum(self.category_counts()[category] for category in DECISION_CATEGORIES)
+        return sum(self.category_counts(active_only=True)[category] for category in DECISION_CATEGORIES)
 
     def _messages_table_exists(self, connection: sqlite3.Connection) -> bool:
         row = connection.execute(
@@ -426,6 +446,18 @@ class InboxRepository:
             CREATE UNIQUE INDEX IF NOT EXISTS idx_messages_external_id
             ON messages(external_id)
             WHERE external_id IS NOT NULL
+            """
+        )
+
+    def _reactivate_unprocessed_imports(self, connection: sqlite3.Connection) -> None:
+        connection.execute(
+            """
+            UPDATE messages
+            SET status = 'inbox'
+            WHERE source = 'imap'
+                AND is_read = 0
+                AND status = 'done'
+                AND category IN ('archive', 'unsubscribe', 'receipt_document')
             """
         )
 

@@ -89,11 +89,54 @@ class InboxRepositoryTest(unittest.TestCase):
             self.assertEqual(repository.decision_count(), 1)
 
             repository.apply_action(message_id, "archive")
-            message = repository.list_messages()[0]
+            message = repository.get_message(message_id)
 
+            self.assertIsNotNone(message)
             self.assertEqual(message.category, "archive")
             self.assertEqual(message.status, "done")
             self.assertTrue(message.is_read)
+            self.assertEqual(repository.dashboard_counts()["Can archive"], 0)
+            self.assertEqual(repository.list_messages(), [])
+
+    def test_mark_read_removes_message_from_active_counts(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = InboxRepository(Path(directory) / "test.sqlite3")
+            repository.initialize()
+            message_id = repository.create_message(
+                "Teammate",
+                "Can you review this?",
+                "Can you review this?",
+                category="reply_now",
+                status="today",
+            )
+
+            self.assertEqual(repository.dashboard_counts()["Needs reply"], 1)
+
+            repository.apply_action(message_id, "mark_read")
+
+            self.assertEqual(repository.dashboard_counts()["Needs reply"], 0)
+            self.assertEqual(repository.decision_count(), 0)
+
+    def test_initialize_reactivates_unread_old_imports(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = InboxRepository(Path(directory) / "test.sqlite3")
+            repository.initialize()
+            message_id = repository.create_message(
+                "Receipt Bot",
+                "Your receipt",
+                "Receipt attached.",
+                status="done",
+                category="receipt_document",
+                source="imap",
+                is_read=False,
+            )
+
+            repository.initialize()
+            message = repository.get_message(message_id)
+
+            self.assertIsNotNone(message)
+            self.assertEqual(message.status, "inbox")
+            self.assertEqual(repository.dashboard_counts()["Receipts"], 1)
 
 
 if __name__ == "__main__":

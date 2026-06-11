@@ -58,7 +58,7 @@ Stop the server with `Control-C`.
 
 ## 3. Configure Email Import
 
-Set these environment variables in your terminal:
+Set these environment variables before you run the importer. You do not need the dashboard server running while importing.
 
 ```bash
 export INBOX_ZERO_IMAP_HOST="imap.gmail.com"
@@ -79,12 +79,14 @@ Most providers do not allow your normal account password for IMAP apps. Use an a
 
 Provider notes:
 
-- Gmail: enable IMAP in Gmail settings, then create an app password from your Google Account security settings.
+- Gmail: enable IMAP in Gmail settings. Then turn on 2-Step Verification, open [Google App Passwords](https://myaccount.google.com/apppasswords), create an app password, and use that 16-character app password for `INBOX_ZERO_PASSWORD`. Your normal Gmail password will fail with `Application-specific password required`.
 - iCloud: create an app-specific password from Apple Account settings.
 - Yahoo: create an app password from Yahoo account security.
 - Outlook / Microsoft 365: IMAP access may need to be enabled by the account or organization.
 
 ## 4. Import Email
+
+Run the import command in the same terminal where you exported the variables.
 
 Import the latest 500 messages:
 
@@ -107,6 +109,8 @@ python3 -m inbox_zero_app.email_importer --mailbox "Archive" --limit 500
 The importer skips messages it has already imported, so you can run it more than once.
 
 ## 5. Open The Dashboard
+
+After import finishes, start the local web app:
 
 ```bash
 python3 -m inbox_zero_app.server

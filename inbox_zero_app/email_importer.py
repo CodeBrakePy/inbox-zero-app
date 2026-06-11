@@ -192,20 +192,66 @@ def main() -> None:
         raise SystemExit(f"Missing required settings: {', '.join(missing)}")
 
     repository = InboxRepository(Path(args.database))
-    summary = import_from_imap(
-        repository,
-        host=args.host,
-        username=args.username,
-        password=args.password,
-        mailbox=args.mailbox,
-        limit=args.limit,
-        unseen_only=args.unseen_only,
-        port=args.port,
-    )
+    try:
+        summary = import_from_imap(
+            repository,
+            host=args.host,
+            username=args.username,
+            password=args.password,
+            mailbox=args.mailbox,
+            limit=args.limit,
+            unseen_only=args.unseen_only,
+            port=args.port,
+        )
+    except imaplib.IMAP4.error as exc:
+        raise SystemExit(_friendly_imap_error(args.host, args.username, exc)) from exc
     print(
         "Import complete: "
         f"scanned={summary.scanned}, imported={summary.imported}, skipped={summary.skipped}"
     )
+
+
+def _friendly_imap_error(host: str, username: str, error: imaplib.IMAP4.error) -> str:
+    message = _decode_imap_error(error)
+    help_text = [
+        f"IMAP login failed for {username} on {host}.",
+        f"Server response: {message}",
+    ]
+
+    if "Application-specific password required" in message or "gmail" in host.lower():
+        help_text.extend(
+            [
+                "",
+                "For Gmail, use a Google app password instead of your normal password:",
+                "1. Turn on 2-Step Verification for your Google Account.",
+                "2. Open https://myaccount.google.com/apppasswords",
+                "3. Create an app password for this local dashboard.",
+                "4. Set INBOX_ZERO_PASSWORD to that 16-character app password.",
+                "",
+                "Example:",
+                "export INBOX_ZERO_IMAP_HOST=\"imap.gmail.com\"",
+                "export INBOX_ZERO_EMAIL=\"you@gmail.com\"",
+                "export INBOX_ZERO_PASSWORD=\"your-16-character-app-password\"",
+                "python3 -m inbox_zero_app.email_importer --limit 50",
+            ]
+        )
+    else:
+        help_text.extend(
+            [
+                "",
+                "Check that IMAP is enabled for the account and that your username, password, host, and mailbox are correct.",
+                "Some providers require an app password instead of your normal account password.",
+            ]
+        )
+
+    return "\n".join(help_text)
+
+
+def _decode_imap_error(error: imaplib.IMAP4.error) -> str:
+    raw = error.args[0] if error.args else error
+    if isinstance(raw, bytes):
+        return raw.decode("utf-8", errors="replace")
+    return str(raw)
 
 
 if __name__ == "__main__":

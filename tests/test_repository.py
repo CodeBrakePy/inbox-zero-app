@@ -24,26 +24,12 @@ class InboxRepositoryTest(unittest.TestCase):
                 status="waiting",
             )
 
-            inbox_messages = repository.list_messages(status="inbox")
-            waiting_messages = repository.list_messages(status="waiting")
+            archive_messages = repository.list_messages(category="archive")
             search_results = repository.list_messages(query="parser")
 
             self.assertGreater(first_id, 0)
-            self.assertEqual([message.subject for message in inbox_messages], ["Compiler notes"])
-            self.assertEqual([message.sender for message in waiting_messages], ["Katherine Johnson"])
+            self.assertEqual([message.subject for message in archive_messages], ["Compiler notes", "Launch checklist"])
             self.assertEqual([message.sender for message in search_results], ["Grace Hopper"])
-
-    def test_update_status_and_counts(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            repository = InboxRepository(Path(directory) / "test.sqlite3")
-            repository.initialize()
-            message_id = repository.create_message("Ada Lovelace", "Analytical Engine", "Ship it.")
-
-            repository.update_status(message_id, "done")
-
-            counts = repository.status_counts()
-            self.assertEqual(counts["inbox"], 0)
-            self.assertEqual(counts["done"], 1)
 
     def test_rejects_unknown_status(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -20,7 +20,6 @@ class ServerTest(unittest.TestCase):
                     "active_filter": "all",
                     "active_category": "all",
                     "category_counts": repository.category_counts(),
-                    "counts": repository.status_counts(),
                     "dashboard_counts": repository.dashboard_counts(),
                     "decision_count": str(repository.decision_count()),
                     "decision_mode": "",
@@ -32,8 +31,9 @@ class ServerTest(unittest.TestCase):
             )
 
             self.assertTrue(database.exists())
-            self.assertIn("Inbox Zero", html)
+            self.assertIn("Today&rsquo;s Inbox", html)
             self.assertIn("Portfolio review notes", html)
+            self.assertIn("Human Decision Queue", html)
 
 
 if __name__ == "__main__":

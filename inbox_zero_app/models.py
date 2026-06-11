@@ -1,4 +1,4 @@
-"""SQLite persistence for the Inbox Zero app."""
+"""SQLite persistence for the inbox triage dashboard."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Optional
 
 
 STATUSES = ("inbox", "today", "waiting", "done")
@@ -201,14 +201,6 @@ class InboxRepository:
             return False
         return True
 
-    def update_status(self, message_id: int, status: str) -> None:
-        self._validate_status(status)
-        with self.connect() as connection:
-            connection.execute(
-                "UPDATE messages SET status = ?, updated_at = ? WHERE id = ?",
-                (status, _utc_now(), message_id),
-            )
-
     def apply_action(self, message_id: int, action: str) -> None:
         updates = {
             "archive": ("done", "archive", "Archived from the triage dashboard.", 1, None),
@@ -247,25 +239,15 @@ class InboxRepository:
                 values,
             )
 
-    def delete_message(self, message_id: int) -> None:
-        with self.connect() as connection:
-            connection.execute("DELETE FROM messages WHERE id = ?", (message_id,))
-
     def list_messages(
         self,
         *,
-        status: Optional[str] = None,
         category: Optional[str] = None,
         decision_only: bool = False,
         query: str = "",
     ) -> list[Message]:
         filters: list[str] = []
         values: list[str] = []
-
-        if status:
-            self._validate_status(status)
-            filters.append("status = ?")
-            values.append(status)
 
         if category:
             self._validate_category(category)
@@ -307,16 +289,6 @@ class InboxRepository:
         with self.connect() as connection:
             rows = connection.execute(sql, values).fetchall()
             return [_message_from_row(row) for row in rows]
-
-    def status_counts(self) -> dict[str, int]:
-        counts = {status: 0 for status in STATUSES}
-        with self.connect() as connection:
-            rows = connection.execute(
-                "SELECT status, COUNT(*) AS total FROM messages GROUP BY status"
-            ).fetchall()
-        for row in rows:
-            counts[row["status"]] = int(row["total"])
-        return counts
 
     def category_counts(self) -> dict[str, int]:
         counts = {category: 0 for category in CATEGORIES}
@@ -445,12 +417,6 @@ class InboxRepository:
     def _create_indexes(self, connection: sqlite3.Connection) -> None:
         connection.execute(
             """
-            CREATE INDEX IF NOT EXISTS idx_messages_status_updated
-            ON messages(status, updated_at DESC)
-            """
-        )
-        connection.execute(
-            """
             CREATE INDEX IF NOT EXISTS idx_messages_category_updated
             ON messages(category, updated_at DESC)
             """
@@ -462,25 +428,6 @@ class InboxRepository:
             WHERE external_id IS NOT NULL
             """
         )
-
-    def _migrate_messages_table(self, connection: sqlite3.Connection) -> None:
-        columns = {
-            row["name"]
-            for row in connection.execute("PRAGMA table_info(messages)").fetchall()
-        }
-        migrations = {
-            "category": "ALTER TABLE messages ADD COLUMN category TEXT NOT NULL DEFAULT 'archive'",
-            "classification_reason": (
-                "ALTER TABLE messages ADD COLUMN classification_reason TEXT NOT NULL DEFAULT 'Added manually.'"
-            ),
-            "source": "ALTER TABLE messages ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'",
-            "external_id": "ALTER TABLE messages ADD COLUMN external_id TEXT",
-            "received_at": "ALTER TABLE messages ADD COLUMN received_at TEXT",
-            "is_read": "ALTER TABLE messages ADD COLUMN is_read INTEGER NOT NULL DEFAULT 0",
-        }
-        for column, sql in migrations.items():
-            if column not in columns:
-                connection.execute(sql)
 
     def _validate_status(self, status: str) -> None:
         if status not in STATUSES:
@@ -516,10 +463,3 @@ def _message_from_row(row: sqlite3.Row) -> Message:
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
-
-
-def group_by_status(messages: Iterable[Message]) -> dict[str, list[Message]]:
-    grouped = {status: [] for status in STATUSES}
-    for message in messages:
-        grouped[message.status].append(message)
-    return grouped

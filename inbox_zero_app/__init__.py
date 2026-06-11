@@ -1,4 +1,4 @@
-"""Inbox Zero web app package."""
+"""Personal inbox triage dashboard package."""
 
 __all__ = ["__version__"]
 

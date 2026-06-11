@@ -3,73 +3,40 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Inbox Zero</title>
+    <title>Inbox Triage Dashboard</title>
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
     <main class="app-shell">
-        <section class="workspace">
-            <header class="workspace-header">
-                <div>
-                    <p class="eyebrow">Python + SQLite productivity app</p>
-                    <h1>Today&rsquo;s Inbox</h1>
-                </div>
-                <form class="search-form" method="get" action="/">
-                    <input type="search" name="q" value="$query" placeholder="Search messages">
-                    <button type="submit" title="Search">Search</button>
-                </form>
-            </header>
+        <header class="workspace-header">
+            <div>
+                <p class="eyebrow">Local email triage</p>
+                <h1>Today&rsquo;s Inbox</h1>
+            </div>
+            <form class="search-form" method="get" action="/">
+                <input type="search" name="q" value="$query" placeholder="Search imported email">
+                <button type="submit">Search</button>
+            </form>
+        </header>
 
-            $error_banner
+        $error_banner
 
-            <section class="dashboard-summary" aria-label="Today's inbox summary">
-                $dashboard_rows
-            </section>
-
-            <a class="$decision_button_class" href="$decision_href">
-                <span>Human Decision Queue</span>
-                <strong>$decision_count</strong>
-            </a>
-
-            <nav class="tabs" aria-label="Inbox filters">
-                $filter_tabs
-            </nav>
-
-            <nav class="criteria-tabs" aria-label="Response criteria">
-                $category_tabs
-            </nav>
-
-            <section class="workflow" aria-label="Workflow summary">
-                $workflow_lanes
-            </section>
-
-            <section class="messages" aria-label="Messages">
-                $message_cards
-            </section>
+        <section class="dashboard-summary" aria-label="Today's inbox summary">
+            $dashboard_rows
         </section>
 
-        <aside class="compose-panel">
-            <h2>New Message</h2>
-            <form method="post" action="/messages">
-                <label>
-                    Sender
-                    <input name="sender" type="text" placeholder="Ada Lovelace" required>
-                </label>
-                <label>
-                    Subject
-                    <input name="subject" type="text" placeholder="Review this idea" required>
-                </label>
-                <label>
-                    Message
-                    <textarea name="body" rows="6" placeholder="Capture the next action..." required></textarea>
-                </label>
-                <label>
-                    Priority
-                    <select name="priority">$priority_options</select>
-                </label>
-                <button class="primary-button" type="submit">Add to Inbox</button>
-            </form>
-        </aside>
+        <a class="$decision_button_class" href="$decision_href">
+            <span>Human Decision Queue</span>
+            <strong>$decision_count</strong>
+        </a>
+
+        <nav class="criteria-tabs" aria-label="Triage categories">
+            $category_tabs
+        </nav>
+
+        <section class="messages" aria-label="Emails">
+            $message_cards
+        </section>
     </main>
 </body>
 </html>

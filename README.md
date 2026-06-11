@@ -1,108 +1,153 @@
 # Personal Inbox Triage Dashboard
 
-A local-first Python web app for deciding what actually needs your attention. It is not a Gmail clone: it imports email metadata/content, classifies each message, and shows a focused triage dashboard for human decisions.
+A local-first Python dashboard that imports email from IMAP, classifies each message, and shows only the emails that need a human decision. It is intentionally not a Gmail clone.
 
-## Features
+## What It Does
 
-- Bulk-import email from an IMAP mailbox.
-- Classify imported mail into reply, waiting, archive, unsubscribe, receipt, calendar, and important-no-action buckets.
-- Show a "Human Decision Queue" that hides obvious archive/newsletter/receipt noise.
-- Apply triage actions: Archive, Mark read, Snooze, Draft reply, Create task, and Unsubscribe.
-- Create manual inbox items with sender, subject, body, and priority.
-- Search across message content.
-- Track "Today's Inbox" counts.
-- Store data locally in SQLite.
-- Run without third-party runtime dependencies.
+- Imports email into a local SQLite database.
+- Classifies messages into:
+  - Reply now
+  - Reply later
+  - Waiting for someone
+  - Archive
+  - Unsubscribe
+  - Receipt/document
+  - Calendar-related
+  - Important but no action
+- Shows a `Human Decision Queue` that hides obvious archive, receipt, and newsletter noise.
+- Lets you triage each message with:
+  - Archive
+  - Mark read
+  - Snooze
+  - Draft reply
+  - Create task
+  - Unsubscribe
 
-## Quick Start
+## Requirements
+
+- Python 3.9 or newer
+- An email account with IMAP enabled
+- An app password for providers that require it
+
+No Python package installation is required. The app uses only the Python standard library.
+
+## 1. Clone And Enter The Project
+
+```bash
+git clone https://github.com/CodeBrakePy/inbox-zero-app.git
+cd inbox-zero-app
+```
+
+If you already have the project locally, just `cd` into the project folder.
+
+## 2. Run The Demo Dashboard
 
 ```bash
 python3 -m inbox_zero_app.server
 ```
 
-Open [http://127.0.0.1:8000](http://127.0.0.1:8000).
+Open:
 
-The app creates `data/inbox.sqlite3` automatically and seeds a few demo messages the first time it runs.
+```text
+http://127.0.0.1:8000
+```
 
-## Import Your Email
+On first run, the app creates `data/inbox.sqlite3` and adds a few demo messages.
 
-The importer uses IMAP and reads credentials from environment variables so secrets never go into the repository.
+Stop the server with `Control-C`.
+
+## 3. Configure Email Import
+
+Set these environment variables in your terminal:
 
 ```bash
 export INBOX_ZERO_IMAP_HOST="imap.gmail.com"
 export INBOX_ZERO_EMAIL="you@example.com"
 export INBOX_ZERO_PASSWORD="your-app-password"
-
-python3 -m inbox_zero_app.email_importer --limit 500
-python3 -m inbox_zero_app.server
 ```
 
-You can import only unread email:
+Common IMAP hosts:
+
+| Provider | IMAP host |
+| --- | --- |
+| Gmail | `imap.gmail.com` |
+| Outlook / Microsoft 365 | `outlook.office365.com` |
+| iCloud Mail | `imap.mail.me.com` |
+| Yahoo Mail | `imap.mail.yahoo.com` |
+
+Most providers do not allow your normal account password for IMAP apps. Use an app password instead.
+
+Provider notes:
+
+- Gmail: enable IMAP in Gmail settings, then create an app password from your Google Account security settings.
+- iCloud: create an app-specific password from Apple Account settings.
+- Yahoo: create an app password from Yahoo account security.
+- Outlook / Microsoft 365: IMAP access may need to be enabled by the account or organization.
+
+## 4. Import Email
+
+Import the latest 500 messages:
+
+```bash
+python3 -m inbox_zero_app.email_importer --limit 500
+```
+
+Import only unread messages:
 
 ```bash
 python3 -m inbox_zero_app.email_importer --limit 200 --unseen-only
 ```
 
-Common IMAP hosts:
-
-- Gmail: `imap.gmail.com`
-- Outlook / Microsoft 365: `outlook.office365.com`
-- iCloud Mail: `imap.mail.me.com`
-- Yahoo Mail: `imap.mail.yahoo.com`
-
-Many providers require an app password instead of your normal account password.
-
-## Core Dashboard
-
-The main screen summarizes today's inbox like this:
-
-```text
-Today's Inbox
--------------
-[Needs reply]      4
-[Waiting on me]    2
-[Can archive]     18
-[Receipts]         7
-[Newsletters]     21
-[Follow up later]  3
-```
-
-The killer feature is the Human Decision Queue: it shows only email that appears to require a person to choose an action.
-
-## Classification Criteria
-
-The classifier is intentionally transparent and editable in `inbox_zero_app/classifier.py`.
-
-- Reply now: questions or direct action phrases like "can you", "please", "review", "thoughts", or "let me know".
-- Reply later: messages that need a reply but include lower-urgency language.
-- Waiting for someone: follow-ups blocked on another person.
-- Archive: automated or low-signal mail with no human decision needed.
-- Unsubscribe: newsletters, digests, and marketing lists.
-- Receipt/document: receipts, invoices, statements, attachments, and records.
-- Calendar-related: meeting invites, scheduling, reschedules, and video-call links.
-- Important but no action: worth keeping visible but not directly reply-worthy.
-
-## Development
-
-Run tests with:
+Import from a different mailbox:
 
 ```bash
-python3 -m unittest discover
+python3 -m inbox_zero_app.email_importer --mailbox "Archive" --limit 500
 ```
 
-Optional linting and formatting tools can be added later, but the project intentionally starts with no required package installation.
+The importer skips messages it has already imported, so you can run it more than once.
+
+## 5. Open The Dashboard
+
+```bash
+python3 -m inbox_zero_app.server
+```
+
+Open:
+
+```text
+http://127.0.0.1:8000
+```
+
+Use `Human Decision Queue` to focus on messages that likely need your attention.
+
+## Reset Local Data
+
+Your imported email is stored locally in `data/inbox.sqlite3`. To start over:
+
+```bash
+rm data/inbox.sqlite3
+python3 -m inbox_zero_app.server
+```
+
+## Run Tests
+
+```bash
+python3 -m unittest discover -s tests -v
+```
 
 ## Project Structure
 
 ```text
 inbox_zero_app/
-  models.py      SQLite repository and data model
-  server.py      HTTP routes, form handling, and template rendering
-  templates/     HTML templates
-  static/        CSS
-tests/           Unit tests
+  classifier.py      Rule-based email classification
+  email_importer.py  IMAP import command
+  models.py          SQLite persistence
+  server.py          Local web dashboard
+  templates/         HTML templates
+  static/            CSS
+tests/               Unit tests
 ```
 
-## Why This Project Showcases Python
+## Privacy
 
-This app demonstrates practical Python skills beyond syntax: HTTP routing, safe form handling, SQLite persistence, dataclasses, input validation, tests, and a clean separation between data access and request handling.
+Credentials are read from environment variables and are not stored in the repository. Imported email content is stored only in your local SQLite database under `data/`, which is ignored by Git.

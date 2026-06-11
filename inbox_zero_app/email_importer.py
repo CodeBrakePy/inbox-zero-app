@@ -1,4 +1,4 @@
-"""Import email from an IMAP mailbox into the local Inbox Zero database."""
+"""Import email from an IMAP mailbox into the local triage database."""
 
 from __future__ import annotations
 
@@ -168,7 +168,7 @@ def _received_at(message: EmailMessage) -> Optional[str]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Import email into Inbox Zero from an IMAP mailbox.")
+    parser = argparse.ArgumentParser(description="Import email into the inbox triage dashboard.")
     parser.add_argument("--host", default=os.getenv("INBOX_ZERO_IMAP_HOST"))
     parser.add_argument("--username", default=os.getenv("INBOX_ZERO_EMAIL"))
     parser.add_argument("--password", default=os.getenv("INBOX_ZERO_PASSWORD"))

@@ -11,7 +11,7 @@ from string import Template
 from typing import Any
 from urllib.parse import parse_qs, quote_plus, unquote, urlparse
 
-from .models import PRIORITIES, STATUSES, InboxRepository, Message, group_by_status
+from .models import CATEGORIES, PRIORITIES, STATUSES, InboxRepository, Message, group_by_status
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -63,18 +63,27 @@ class InboxRequestHandler(BaseHTTPRequestHandler):
 
     def _render_index(self, query_params: dict[str, list[str]]) -> None:
         status = _single(query_params, "status", "")
+        category = _single(query_params, "category", "")
         search = _single(query_params, "q", "").strip()
         error = _single(query_params, "error", "")
 
         if status and status not in STATUSES:
             status = ""
+        if category and category not in CATEGORIES:
+            category = ""
 
-        messages = self.repository.list_messages(status=status or None, query=search)
-        grouped = group_by_status(messages if not status else self.repository.list_messages(query=search))
+        messages = self.repository.list_messages(
+            status=status or None,
+            category=category or None,
+            query=search,
+        )
+        grouped = group_by_status(self.repository.list_messages(category=category or None, query=search))
         content = render_template(
             "index.html",
             {
+                "active_category": category or "all",
                 "active_filter": status or "all",
+                "category_counts": self.repository.category_counts(),
                 "counts": self.repository.status_counts(),
                 "error": error,
                 "grouped_messages": grouped,
@@ -159,6 +168,11 @@ def render_template(template_name: str, context: dict[str, Any]) -> str:
             {
                 "error_banner": _render_error(context["error"]),
                 "filter_tabs": _render_filter_tabs(context["active_filter"], context["counts"], context["query"]),
+                "category_tabs": _render_category_tabs(
+                    context["active_category"],
+                    context["category_counts"],
+                    context["query"],
+                ),
                 "message_cards": _render_message_cards(context["messages"]),
                 "workflow_lanes": _render_workflow_lanes(context["grouped_messages"]),
                 "priority_options": _render_options(PRIORITIES, "normal"),
@@ -189,6 +203,21 @@ def _render_filter_tabs(active_filter: str, counts: dict[str, int], query: str) 
     return "\n".join(tabs)
 
 
+def _render_category_tabs(active_category: str, counts: dict[str, int], query: str) -> str:
+    categories = [("all", "All Criteria", sum(counts.values()))] + [
+        (category, _category_label(category), counts[category]) for category in CATEGORIES
+    ]
+    tabs = []
+    query_part = f"&q={_escape_url(query)}" if query else ""
+    for key, label, count in categories:
+        href = "/" if key == "all" and not query else f"/?category={key if key != 'all' else ''}{query_part}"
+        active = " active" if active_category == key else ""
+        tabs.append(
+            f'<a class="criterion-tab{active}" href="{href}"><span>{label}</span><strong>{count}</strong></a>'
+        )
+    return "\n".join(tabs)
+
+
 def _render_message_cards(messages: list[Message]) -> str:
     if not messages:
         return '<div class="empty-state"><h2>Inbox clear</h2><p>No messages match this view.</p></div>'
@@ -215,6 +244,10 @@ def _render_message_card(message: Message) -> str:
             <span class="priority-dot" title="{message.priority.title()} priority"></span>
             <span class="sender">{_escape(message.sender)}</span>
             <span class="status-pill">{_escape(message.status.title())}</span>
+        </div>
+        <div class="classification-row">
+            <span class="category-pill category-{message.category}">{_escape(_category_label(message.category))}</span>
+            <span>{_escape(message.classification_reason)}</span>
         </div>
         <h2>{_escape(message.subject)}</h2>
         <p>{_escape(message.body)}</p>
@@ -263,6 +296,15 @@ def _status_icon(status: str) -> str:
         "waiting": "W",
         "done": "D",
     }[status]
+
+
+def _category_label(category: str) -> str:
+    return {
+        "needs_response": "Needs Response",
+        "no_response": "No Response",
+        "newsletter": "Newsletter",
+        "automated": "Automated",
+    }[category]
 
 
 def _single(values: dict[str, list[str]], key: str, default: str) -> str:

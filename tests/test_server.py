@@ -18,6 +18,8 @@ class ServerTest(unittest.TestCase):
                 "index.html",
                 {
                     "active_filter": "all",
+                    "active_category": "all",
+                    "category_counts": repository.category_counts(),
                     "counts": repository.status_counts(),
                     "error": "",
                     "grouped_messages": {"inbox": [], "today": [], "waiting": [], "done": []},

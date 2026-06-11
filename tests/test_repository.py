@@ -53,6 +53,40 @@ class InboxRepositoryTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 repository.create_message("Sender", "Subject", "Body", status="later")
 
+    def test_create_imported_message_deduplicates_by_external_id(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = InboxRepository(Path(directory) / "test.sqlite3")
+            repository.initialize()
+
+            first = repository.create_imported_message(
+                sender="Person <person@example.com>",
+                subject="Can you review this today?",
+                body="Can you review this today?",
+                status="today",
+                priority="high",
+                category="needs_response",
+                classification_reason="Contains a direct action phrase.",
+                source="imap",
+                external_id="<message-1@example.com>",
+                received_at="2026-06-11T12:00:00+00:00",
+            )
+            second = repository.create_imported_message(
+                sender="Person <person@example.com>",
+                subject="Can you review this today?",
+                body="Can you review this today?",
+                status="today",
+                priority="high",
+                category="needs_response",
+                classification_reason="Contains a direct action phrase.",
+                source="imap",
+                external_id="<message-1@example.com>",
+                received_at="2026-06-11T12:00:00+00:00",
+            )
+
+            self.assertTrue(first)
+            self.assertFalse(second)
+            self.assertEqual(repository.category_counts()["needs_response"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

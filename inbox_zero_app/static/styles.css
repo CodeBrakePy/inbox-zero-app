@@ -98,6 +98,7 @@ textarea {
 
 button,
 .tab,
+.criterion-tab,
 .error-page a {
     border: 0;
     border-radius: 8px;
@@ -116,9 +117,18 @@ button,
     margin-bottom: 18px;
 }
 
-.tab {
+.criteria-tabs {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.tab,
+.criterion-tab {
     display: inline-flex;
     align-items: center;
+    justify-content: space-between;
     gap: 12px;
     min-height: 44px;
     background: var(--surface);
@@ -126,17 +136,20 @@ button,
     border: 1px solid var(--line);
 }
 
-.tab strong {
+.tab strong,
+.criterion-tab strong {
     color: var(--green);
 }
 
-.tab.active {
+.tab.active,
+.criterion-tab.active {
     background: var(--green);
     color: #fff;
     border-color: var(--green);
 }
 
-.tab.active strong {
+.tab.active strong,
+.criterion-tab.active strong {
     color: #fff;
 }
 
@@ -230,6 +243,41 @@ button,
     margin-bottom: 0;
     color: var(--muted);
     line-height: 1.55;
+}
+
+.classification-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 0.82rem;
+    line-height: 1.35;
+}
+
+.category-pill {
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: #ecf2ef;
+    color: var(--green);
+    font-size: 0.72rem;
+    font-weight: 900;
+    padding: 4px 8px;
+    text-transform: uppercase;
+}
+
+.category-needs_response {
+    background: rgba(175, 63, 63, 0.1);
+    color: var(--red);
+}
+
+.category-newsletter {
+    background: rgba(183, 121, 31, 0.12);
+    color: var(--gold);
+}
+
+.category-automated {
+    background: rgba(49, 95, 145, 0.1);
+    color: var(--blue);
 }
 
 .message-topline,
@@ -376,6 +424,10 @@ label {
     .workflow {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
+    .criteria-tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 640px) {
@@ -391,6 +443,10 @@ label {
     }
 
     .workflow {
+        grid-template-columns: 1fr;
+    }
+
+    .criteria-tabs {
         grid-template-columns: 1fr;
     }
 

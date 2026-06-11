@@ -1,15 +1,16 @@
-# Inbox Zero
+# Personal Inbox Triage Dashboard
 
-A local-first Python web app for turning a messy inbox into a simple action workflow. It is built with the Python standard library, SQLite, and server-rendered HTML/CSS so the code is easy to run, inspect, and extend.
+A local-first Python web app for deciding what actually needs your attention. It is not a Gmail clone: it imports email metadata/content, classifies each message, and shows a focused triage dashboard for human decisions.
 
 ## Features
 
-- Create inbox items with sender, subject, body, and priority.
 - Bulk-import email from an IMAP mailbox.
-- Classify imported mail as Needs Response, No Response, Newsletter, or Automated.
-- Move messages through Inbox, Today, Waiting, and Done states.
+- Classify imported mail into reply, waiting, archive, unsubscribe, receipt, calendar, and important-no-action buckets.
+- Show a "Human Decision Queue" that hides obvious archive/newsletter/receipt noise.
+- Apply triage actions: Archive, Mark read, Snooze, Draft reply, Create task, and Unsubscribe.
+- Create manual inbox items with sender, subject, body, and priority.
 - Search across message content.
-- Track status counts and compact workflow previews.
+- Track "Today's Inbox" counts.
 - Store data locally in SQLite.
 - Run without third-party runtime dependencies.
 
@@ -51,14 +52,35 @@ Common IMAP hosts:
 
 Many providers require an app password instead of your normal account password.
 
+## Core Dashboard
+
+The main screen summarizes today's inbox like this:
+
+```text
+Today's Inbox
+-------------
+[Needs reply]      4
+[Waiting on me]    2
+[Can archive]     18
+[Receipts]         7
+[Newsletters]     21
+[Follow up later]  3
+```
+
+The killer feature is the Human Decision Queue: it shows only email that appears to require a person to choose an action.
+
 ## Classification Criteria
 
 The classifier is intentionally transparent and editable in `inbox_zero_app/classifier.py`.
 
-- Needs Response: questions or direct action phrases like "can you", "please", "review", "thoughts", or "let me know".
-- No Response: messages without a direct reply signal, or messages that look like waiting/follow-up states.
-- Newsletter: digests, marketing mail, unsubscribe links, and preference-management language.
-- Automated: no-reply senders, receipts, verification codes, security alerts, and transactional notices.
+- Reply now: questions or direct action phrases like "can you", "please", "review", "thoughts", or "let me know".
+- Reply later: messages that need a reply but include lower-urgency language.
+- Waiting for someone: follow-ups blocked on another person.
+- Archive: automated or low-signal mail with no human decision needed.
+- Unsubscribe: newsletters, digests, and marketing lists.
+- Receipt/document: receipts, invoices, statements, attachments, and records.
+- Calendar-related: meeting invites, scheduling, reschedules, and video-call links.
+- Important but no action: worth keeping visible but not directly reply-worthy.
 
 ## Development
 

@@ -117,6 +117,53 @@ button,
     margin-bottom: 18px;
 }
 
+.dashboard-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.dashboard-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 54px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--ink);
+    font-weight: 850;
+    padding: 13px 14px;
+    text-decoration: none;
+}
+
+.dashboard-row strong {
+    color: var(--green);
+    font-size: 1.3rem;
+}
+
+.decision-button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 56px;
+    margin-bottom: 18px;
+    border-radius: 8px;
+    background: var(--ink);
+    color: #fff;
+    font-size: 1rem;
+    text-decoration: none;
+}
+
+.decision-button.active {
+    background: var(--red);
+}
+
+.decision-button strong {
+    font-size: 1.4rem;
+}
+
 .criteria-tabs {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -245,6 +292,10 @@ button,
     line-height: 1.55;
 }
 
+.read-true {
+    opacity: 0.82;
+}
+
 .classification-row {
     display: flex;
     align-items: center;
@@ -328,6 +379,21 @@ button,
 .message-actions {
     align-self: end;
     justify-content: space-between;
+}
+
+.triage-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.triage-actions button {
+    min-height: 34px;
+    border: 1px solid var(--line);
+    background: #f8faf8;
+    color: var(--ink);
+    font-size: 0.8rem;
+    padding: 7px 9px;
 }
 
 .status-actions {
@@ -425,6 +491,10 @@ label {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    .dashboard-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .criteria-tabs {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -443,6 +513,10 @@ label {
     }
 
     .workflow {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-summary {
         grid-template-columns: 1fr;
     }
 

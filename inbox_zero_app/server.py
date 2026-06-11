@@ -45,6 +45,9 @@ class InboxRequestHandler(BaseHTTPRequestHandler):
             elif parsed.path.startswith("/messages/") and parsed.path.endswith("/status"):
                 message_id = int(parsed.path.split("/")[2])
                 self.repository.update_status(message_id, _single(form, "status", "inbox"))
+            elif parsed.path.startswith("/messages/") and parsed.path.endswith("/action"):
+                message_id = int(parsed.path.split("/")[2])
+                self.repository.apply_action(message_id, _single(form, "action", ""))
             elif parsed.path.startswith("/messages/") and parsed.path.endswith("/delete"):
                 message_id = int(parsed.path.split("/")[2])
                 self.repository.delete_message(message_id)
@@ -55,7 +58,7 @@ class InboxRequestHandler(BaseHTTPRequestHandler):
             self._redirect(f"/?error={exc}")
             return
 
-        self._redirect("/")
+        self._redirect(self._return_path())
 
     def log_message(self, format: str, *args: Any) -> None:
         """Keep local development logs compact."""
@@ -64,6 +67,7 @@ class InboxRequestHandler(BaseHTTPRequestHandler):
     def _render_index(self, query_params: dict[str, list[str]]) -> None:
         status = _single(query_params, "status", "")
         category = _single(query_params, "category", "")
+        decision_only = _single(query_params, "decision", "") == "1"
         search = _single(query_params, "q", "").strip()
         error = _single(query_params, "error", "")
 
@@ -75,9 +79,16 @@ class InboxRequestHandler(BaseHTTPRequestHandler):
         messages = self.repository.list_messages(
             status=status or None,
             category=category or None,
+            decision_only=decision_only,
             query=search,
         )
-        grouped = group_by_status(self.repository.list_messages(category=category or None, query=search))
+        grouped = group_by_status(
+            self.repository.list_messages(
+                category=category or None,
+                decision_only=decision_only,
+                query=search,
+            )
+        )
         content = render_template(
             "index.html",
             {
@@ -85,6 +96,9 @@ class InboxRequestHandler(BaseHTTPRequestHandler):
                 "active_filter": status or "all",
                 "category_counts": self.repository.category_counts(),
                 "counts": self.repository.status_counts(),
+                "dashboard_counts": self.repository.dashboard_counts(),
+                "decision_count": str(self.repository.decision_count()),
+                "decision_mode": "active" if decision_only else "",
                 "error": error,
                 "grouped_messages": grouped,
                 "messages": messages,
@@ -153,6 +167,13 @@ class InboxRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Location", location)
         self.end_headers()
 
+    def _return_path(self) -> str:
+        referer = self.headers.get("Referer", "/")
+        parsed = urlparse(referer)
+        if parsed.path != "/":
+            return "/"
+        return f"/?{parsed.query}" if parsed.query else "/"
+
 
 def render_template(template_name: str, context: dict[str, Any]) -> str:
     template_path = BASE_DIR / "templates" / template_name
@@ -173,6 +194,9 @@ def render_template(template_name: str, context: dict[str, Any]) -> str:
                     context["category_counts"],
                     context["query"],
                 ),
+                "dashboard_rows": _render_dashboard_rows(context["dashboard_counts"]),
+                "decision_href": _decision_href(context["query"]),
+                "decision_button_class": f'decision-button {context["decision_mode"]}'.strip(),
                 "message_cards": _render_message_cards(context["messages"]),
                 "workflow_lanes": _render_workflow_lanes(context["grouped_messages"]),
                 "priority_options": _render_options(PRIORITIES, "normal"),
@@ -218,6 +242,35 @@ def _render_category_tabs(active_category: str, counts: dict[str, int], query: s
     return "\n".join(tabs)
 
 
+def _render_dashboard_rows(counts: dict[str, int]) -> str:
+    return "\n".join(
+        f"""
+        <a class="dashboard-row" href="{_summary_href(label)}">
+            <span>{_escape(label)}</span>
+            <strong>{count}</strong>
+        </a>
+        """
+        for label, count in counts.items()
+    )
+
+
+def _summary_href(label: str) -> str:
+    category = {
+        "Needs reply": "reply_now",
+        "Waiting on me": "reply_later",
+        "Can archive": "archive",
+        "Receipts": "receipt_document",
+        "Newsletters": "unsubscribe",
+        "Follow up later": "waiting_for_someone",
+    }[label]
+    return f"/?category={category}"
+
+
+def _decision_href(query: str) -> str:
+    query_part = f"&q={_escape_url(query)}" if query else ""
+    return f"/?decision=1{query_part}"
+
+
 def _render_message_cards(messages: list[Message]) -> str:
     if not messages:
         return '<div class="empty-state"><h2>Inbox clear</h2><p>No messages match this view.</p></div>'
@@ -239,7 +292,7 @@ def _render_message_card(message: Message) -> str:
         )
 
     return f"""
-    <article class="message-card priority-{message.priority}">
+    <article class="message-card priority-{message.priority} read-{str(message.is_read).lower()}">
         <div class="message-topline">
             <span class="priority-dot" title="{message.priority.title()} priority"></span>
             <span class="sender">{_escape(message.sender)}</span>
@@ -251,6 +304,14 @@ def _render_message_card(message: Message) -> str:
         </div>
         <h2>{_escape(message.subject)}</h2>
         <p>{_escape(message.body)}</p>
+        <div class="triage-actions">
+            {_render_action_button(message.id, "archive", "Archive")}
+            {_render_action_button(message.id, "mark_read", "Mark read")}
+            {_render_action_button(message.id, "snooze", "Snooze")}
+            {_render_action_button(message.id, "draft_reply", "Draft reply")}
+            {_render_action_button(message.id, "create_task", "Create task")}
+            {_render_action_button(message.id, "unsubscribe", "Unsubscribe")}
+        </div>
         <div class="message-actions">
             <div class="status-actions">{"".join(status_buttons)}</div>
             <form method="post" action="/messages/{message.id}/delete">
@@ -258,6 +319,15 @@ def _render_message_card(message: Message) -> str:
             </form>
         </div>
     </article>
+    """
+
+
+def _render_action_button(message_id: int, action: str, label: str) -> str:
+    return f"""
+    <form method="post" action="/messages/{message_id}/action">
+        <input type="hidden" name="action" value="{action}">
+        <button type="submit">{label}</button>
+    </form>
     """
 
 
@@ -300,10 +370,14 @@ def _status_icon(status: str) -> str:
 
 def _category_label(category: str) -> str:
     return {
-        "needs_response": "Needs Response",
-        "no_response": "No Response",
-        "newsletter": "Newsletter",
-        "automated": "Automated",
+        "reply_now": "Reply Now",
+        "reply_later": "Reply Later",
+        "waiting_for_someone": "Waiting For Someone",
+        "archive": "Archive",
+        "unsubscribe": "Unsubscribe",
+        "receipt_document": "Receipt/Document",
+        "calendar_related": "Calendar-Related",
+        "important_no_action": "Important, No Action",
     }[category]
 
 

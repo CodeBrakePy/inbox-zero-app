@@ -64,7 +64,7 @@ class InboxRepositoryTest(unittest.TestCase):
                 body="Can you review this today?",
                 status="today",
                 priority="high",
-                category="needs_response",
+                category="reply_now",
                 classification_reason="Contains a direct action phrase.",
                 source="imap",
                 external_id="<message-1@example.com>",
@@ -76,7 +76,7 @@ class InboxRepositoryTest(unittest.TestCase):
                 body="Can you review this today?",
                 status="today",
                 priority="high",
-                category="needs_response",
+                category="reply_now",
                 classification_reason="Contains a direct action phrase.",
                 source="imap",
                 external_id="<message-1@example.com>",
@@ -85,7 +85,29 @@ class InboxRepositoryTest(unittest.TestCase):
 
             self.assertTrue(first)
             self.assertFalse(second)
-            self.assertEqual(repository.category_counts()["needs_response"], 1)
+            self.assertEqual(repository.category_counts()["reply_now"], 1)
+
+    def test_dashboard_counts_and_actions(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = InboxRepository(Path(directory) / "test.sqlite3")
+            repository.initialize()
+            message_id = repository.create_message(
+                "Teammate",
+                "Can you send this?",
+                "Can you send this today?",
+                category="reply_now",
+                status="today",
+            )
+
+            self.assertEqual(repository.dashboard_counts()["Needs reply"], 1)
+            self.assertEqual(repository.decision_count(), 1)
+
+            repository.apply_action(message_id, "archive")
+            message = repository.list_messages()[0]
+
+            self.assertEqual(message.category, "archive")
+            self.assertEqual(message.status, "done")
+            self.assertTrue(message.is_read)
 
 
 if __name__ == "__main__":

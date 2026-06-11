@@ -35,11 +35,21 @@ NEEDS_RESPONSE_PHRASES = (
     "get back to me",
 )
 
+REPLY_LATER_PHRASES = (
+    "when you have time",
+    "not urgent",
+    "next week",
+    "later this week",
+    "by end of week",
+    "whenever you can",
+)
+
 WAITING_PHRASES = (
     "waiting on",
     "pending",
     "circling back",
     "following up",
+    "checking in",
 )
 
 NEWSLETTER_PHRASES = (
@@ -64,6 +74,28 @@ AUTOMATED_PHRASES = (
     "statement",
 )
 
+RECEIPT_PHRASES = (
+    "receipt",
+    "invoice",
+    "statement",
+    "document",
+    "attachment",
+    "tax",
+    "payment confirmation",
+)
+
+CALENDAR_PHRASES = (
+    "calendar",
+    "invite",
+    "invitation",
+    "meeting",
+    "rescheduled",
+    "schedule",
+    "zoom",
+    "google meet",
+    "teams meeting",
+)
+
 HIGH_PRIORITY_PHRASES = (
     "urgent",
     "asap",
@@ -78,44 +110,68 @@ def classify_email(sender: str, subject: str, body: str) -> EmailClassification:
     text = f"{sender} {subject} {body}".lower()
     sender_lower = sender.lower()
 
+    if _contains_any(text, CALENDAR_PHRASES):
+        return EmailClassification(
+            category="calendar_related",
+            priority="normal",
+            status="today",
+            reason="Looks calendar-related and may need a scheduling decision.",
+        )
+
     if _contains_any(text, NEWSLETTER_PHRASES):
         return EmailClassification(
-            category="newsletter",
+            category="unsubscribe",
             priority="low",
-            status="inbox",
-            reason="Looks like a newsletter, digest, or marketing email.",
+            status="done",
+            reason="Looks like a newsletter or mailing list.",
+        )
+
+    if _contains_any(text, RECEIPT_PHRASES):
+        return EmailClassification(
+            category="receipt_document",
+            priority="low",
+            status="done",
+            reason="Looks like a receipt, invoice, statement, or document.",
         )
 
     if _contains_any(text, AUTOMATED_PHRASES) or _contains_any(sender_lower, ("no-reply", "noreply")):
         return EmailClassification(
-            category="automated",
+            category="archive",
             priority="low",
-            status="inbox",
+            status="done",
             reason="Looks automated, transactional, or notification-only.",
         )
 
     if _contains_any(text, WAITING_PHRASES):
         return EmailClassification(
-            category="no_response",
+            category="waiting_for_someone",
             priority="normal",
             status="waiting",
-            reason="Looks like a follow-up or waiting state.",
+            reason="Looks like follow-up is blocked on someone else.",
+        )
+
+    if _contains_any(text, REPLY_LATER_PHRASES):
+        return EmailClassification(
+            category="reply_later",
+            priority="normal",
+            status="waiting",
+            reason="Needs a reply, but language suggests it can wait.",
         )
 
     if "?" in subject or "?" in body or _contains_any(text, NEEDS_RESPONSE_PHRASES):
         priority = "high" if _contains_any(text, HIGH_PRIORITY_PHRASES) else "normal"
         return EmailClassification(
-            category="needs_response",
+            category="reply_now",
             priority=priority,
             status="today",
             reason="Contains a question or direct action phrase.",
         )
 
     return EmailClassification(
-        category="no_response",
+        category="archive",
         priority="low",
-        status="inbox",
-        reason="No direct reply signal found.",
+        status="done",
+        reason="No human decision signal found.",
     )
 
 

@@ -11,7 +11,7 @@ class ClassifierTest(unittest.TestCase):
             "Please send me your thoughts before the deadline.",
         )
 
-        self.assertEqual(result.category, "needs_response")
+        self.assertEqual(result.category, "reply_now")
         self.assertEqual(result.status, "today")
         self.assertEqual(result.priority, "high")
 
@@ -22,7 +22,7 @@ class ClassifierTest(unittest.TestCase):
             "You are receiving this newsletter. Unsubscribe here.",
         )
 
-        self.assertEqual(result.category, "newsletter")
+        self.assertEqual(result.category, "unsubscribe")
         self.assertEqual(result.priority, "low")
 
     def test_detects_automated_email(self) -> None:
@@ -32,7 +32,7 @@ class ClassifierTest(unittest.TestCase):
             "This is a receipt. Do not reply.",
         )
 
-        self.assertEqual(result.category, "automated")
+        self.assertEqual(result.category, "receipt_document")
 
 
 if __name__ == "__main__":

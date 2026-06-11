@@ -12,7 +12,7 @@
             <header class="workspace-header">
                 <div>
                     <p class="eyebrow">Python + SQLite productivity app</p>
-                    <h1>Inbox Zero</h1>
+                    <h1>Today&rsquo;s Inbox</h1>
                 </div>
                 <form class="search-form" method="get" action="/">
                     <input type="search" name="q" value="$query" placeholder="Search messages">
@@ -21,6 +21,15 @@
             </header>
 
             $error_banner
+
+            <section class="dashboard-summary" aria-label="Today's inbox summary">
+                $dashboard_rows
+            </section>
+
+            <a class="$decision_button_class" href="$decision_href">
+                <span>Human Decision Queue</span>
+                <strong>$decision_count</strong>
+            </a>
 
             <nav class="tabs" aria-label="Inbox filters">
                 $filter_tabs
